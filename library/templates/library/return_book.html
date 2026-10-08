@@ -1,0 +1,131 @@
+{% extends 'library/base.html' %}
+{% load static %}
+
+{% block title %}Return Book — LibriVerse{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <!-- Header -->
+            <div class="d-flex align-items-center justify-content-between mb-4">
+                <div>
+                    <h2 class="fw-bold mb-1">Process Book Return</h2>
+                    <p class="text-muted mb-0">Record check-in, calculate overdue fines, and restore inventory copies.</p>
+                </div>
+                <a href="{% url 'return_book_select' %}" class="btn btn-outline-secondary btn-sm">
+                    <i class="bi bi-arrow-left me-1"></i> Active Loans
+                </a>
+            </div>
+
+            <!-- Loan & Book Summary Card -->
+            <div class="card-modern p-4 mb-4">
+                <div class="row g-4 align-items-center">
+                    <div class="col-auto">
+                        <img src="{{ record.book.cover_url }}" alt="{{ record.book.title }}" 
+                             style="width: 80px; height: 110px; object-fit: cover; border-radius: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.1);"
+                             onerror="this.onerror=null; this.src='https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?auto=format&fit=crop&w=600&q=80';">
+                    </div>
+                    <div class="col">
+                        <span class="badge bg-primary-subtle text-primary mb-1">{{ record.book.genre }}</span>
+                        <h4 class="fw-bold mb-1">{{ record.book.title }}</h4>
+                        <div class="text-muted small mb-2">Author: {{ record.book.author.name }} | ISBN: {{ record.book.isbn }}</div>
+                        <div class="small">
+                            <span class="text-secondary fw-semibold">Borrower:</span> 
+                            <a href="{% url 'member_dashboard' record.member.id %}" class="text-primary text-decoration-none fw-bold">
+                                {{ record.member.name }}
+                            </a> ({{ record.member.member_id }})
+                        </div>
+                    </div>
+                </div>
+
+                <hr class="my-3">
+
+                <div class="row g-3 text-center">
+                    <div class="col-sm-4">
+                        <div class="p-2 bg-light rounded">
+                            <div class="small text-muted">Issue Date</div>
+                            <div class="fw-bold">{{ record.issue_date|date:"M d, Y" }}</div>
+                        </div>
+                    </div>
+                    <div class="col-sm-4">
+                        <div class="p-2 bg-light rounded">
+                            <div class="small text-muted">Due Date</div>
+                            <div class="fw-bold text-primary">{{ record.due_date|date:"M d, Y" }}</div>
+                        </div>
+                    </div>
+                    <div class="col-sm-4">
+                        <div class="p-2 bg-light rounded">
+                            <div class="small text-muted">Current Status</div>
+                            <div>
+                                {% if record.is_overdue %}
+                                    <span class="badge badge-overdue">Overdue</span>
+                                {% else %}
+                                    <span class="badge bg-success-subtle text-success">Active / Safe</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Return Processing Form Card -->
+            <div class="card-modern p-4 p-md-5">
+                <!-- Hidden Data Elements for Real-Time JavaScript Calculations -->
+                <input type="hidden" id="loanDueDateData" value="{{ record.due_date|date:'Y-m-d' }}">
+                <input type="hidden" id="dailyFineRateData" value="{{ daily_fine_rate }}">
+
+                <form method="POST" novalidate>
+                    {% csrf_token %}
+
+                    <!-- Return Date Picker -->
+                    <div class="mb-4">
+                        <label for="id_return_date" class="form-label fw-bold">Return Date (Check-in Date) *</label>
+                        {{ form.return_date }}
+                        <div class="form-text">Defaults to today's date. Changing this date dynamically recalculates the fine.</div>
+                    </div>
+
+                    <!-- Live Dynamic Fine Assessment Display -->
+                    <div id="liveFineBanner" class="alert {% if days_overdue > 0 %}alert-danger{% else %}alert-success{% endif %} d-flex align-items-center mb-4">
+                        {% if days_overdue > 0 %}
+                            <i class="bi bi-exclamation-triangle-fill fs-3 me-3 text-danger"></i>
+                            <div>
+                                <strong class="d-block">Overdue Penalty Notice</strong>
+                                This book is <strong id="liveOverdueDays">{{ days_overdue }} days</strong> overdue. 
+                                A fine of <strong id="liveFineAmount">${{ estimated_fine }}</strong> (${{ daily_fine_rate }}/day) will be applied.
+                            </div>
+                        {% else %}
+                            <i class="bi bi-check-circle-fill fs-3 me-3 text-success"></i>
+                            <div>
+                                <strong class="d-block">On-Time Return</strong>
+                                No overdue penalty applies. Thank you for returning this item on schedule!
+                            </div>
+                        {% endif %}
+                    </div>
+
+                    <!-- Return Rules Notice -->
+                    <div class="bg-light p-3 rounded-3 small text-muted mb-4">
+                        <div class="d-flex align-items-center gap-2 mb-1">
+                            <i class="bi bi-info-circle-fill text-primary"></i>
+                            <strong class="text-dark">Inventory & Fine Settlement Actions:</strong>
+                        </div>
+                        <ul class="mb-0 ps-3">
+                            <li>Book copy count will automatically increment: <strong>{{ record.book.available_copies }} &rarr; {{ record.book.available_copies|add:"1" }} available</strong>.</li>
+                            <li>Circulation record will be archived as <em>Returned</em> with timestamp.</li>
+                            <li>Assessed fine will be logged to member history.</li>
+                        </ul>
+                    </div>
+
+                    <!-- Submit Actions -->
+                    <div class="d-flex gap-2 justify-content-end">
+                        <a href="{% url 'member_dashboard' record.member.id %}" class="btn btn-outline-secondary">Cancel</a>
+                        <button type="submit" class="btn btn-primary-custom px-4">
+                            <i class="bi bi-check2-circle me-1"></i> Confirm & Complete Return
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

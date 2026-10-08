@@ -1,0 +1,211 @@
+{% extends 'library/base.html' %}
+{% load static %}
+
+{% block title %}Interactive Due-Date & Fine Calculator — LibriVerse{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <!-- Header -->
+    <div class="text-center mb-5">
+        <span class="badge bg-primary-subtle text-primary mb-2 px-3 py-2 rounded-pill">
+            <i class="bi bi-calculator me-1"></i> Library Circulation Utilities
+        </span>
+        <h1 class="display-6 fw-bold mb-2">Interactive Due-Date & Fine Calculator</h1>
+        <p class="text-muted lead mx-auto" style="max-width: 680px;">
+            Simulate loan durations, compute exact due dates, and dynamically calculate overdue penalties using live JavaScript calculations.
+        </p>
+    </div>
+
+    <!-- Calculator Card -->
+    <div class="row g-4 justify-content-center">
+        <!-- Input Controls Form Column -->
+        <div class="col-lg-6">
+            <div class="card-modern p-4 p-md-5 h-100">
+                <h4 class="fw-bold mb-4 d-flex align-items-center gap-2">
+                    <span class="bg-primary text-white p-2 rounded-3 fs-5 d-inline-flex align-items-center justify-content-center" style="width: 36px; height: 36px;">
+                        <i class="bi bi-sliders"></i>
+                    </span>
+                    Loan Parameters
+                </h4>
+
+                <!-- Issue Date -->
+                <div class="mb-4">
+                    <label for="calcIssueDate" class="form-label fw-bold">Issue Date (Checkout Date)</label>
+                    <input type="date" id="calcIssueDate" class="form-control form-control-lg" value="{{ today|date:'Y-m-d' }}">
+                    <div class="form-text">The date the book was borrowed from the library.</div>
+                </div>
+
+                <!-- Loan Duration Slider -->
+                <div class="mb-4">
+                    <div class="d-flex justify-content-between align-items-center mb-1">
+                        <label for="calcLoanDays" class="form-label fw-bold mb-0">Loan Duration</label>
+                        <span id="calcLoanDaysValue" class="badge bg-primary px-3 py-1 fs-6">14 days</span>
+                    </div>
+                    <input type="range" class="form-range" id="calcLoanDays" min="1" max="60" value="14" step="1">
+                    <div class="d-flex justify-content-between small text-muted">
+                        <span>1 day (Short loan)</span>
+                        <span class="fw-bold text-primary">14 days (Standard)</span>
+                        <span>60 days (Extended)</span>
+                    </div>
+                </div>
+
+                <!-- Actual Return Date -->
+                <div class="mb-4">
+                    <label for="calcReturnDate" class="form-label fw-bold">Actual Return Date</label>
+                    <input type="date" id="calcReturnDate" class="form-control form-control-lg" value="{{ today|date:'Y-m-d' }}">
+                    <div class="form-text">Select any date to test on-time, early, or overdue scenarios.</div>
+                </div>
+
+                <!-- Daily Fine Rate -->
+                <div class="mb-4">
+                    <label for="calcFineRate" class="form-label fw-bold">Overdue Fine Rate ($ / Day)</label>
+                    <div class="input-group">
+                        <span class="input-group-text">$</span>
+                        <input type="number" id="calcFineRate" class="form-control" value="1.00" step="0.25" min="0">
+                        <span class="input-group-text">per day</span>
+                    </div>
+                    <div class="form-text">Default library fine rate is $1.00 per calendar day past due date.</div>
+                </div>
+
+                <!-- Quick Simulation Presets -->
+                <div>
+                    <label class="form-label fw-bold small text-muted text-uppercase">Test Scenarios & Presets</label>
+                    <div class="d-flex flex-wrap gap-2">
+                        <button type="button" class="btn btn-sm btn-outline-success" onclick="applyPreset(0)">
+                            <i class="bi bi-check-circle me-1"></i> Exact Due Date (0d)
+                        </button>
+                        <button type="button" class="btn btn-sm btn-outline-warning" onclick="applyPreset(3)">
+                            <i class="bi bi-clock-history me-1"></i> 3 Days Late
+                        </button>
+                        <button type="button" class="btn btn-sm btn-outline-danger" onclick="applyPreset(10)">
+                            <i class="bi bi-exclamation-triangle me-1"></i> 10 Days Late
+                        </button>
+                        <button type="button" class="btn btn-sm btn-outline-danger" onclick="applyPreset(21)">
+                            <i class="bi bi-fire me-1"></i> 3 Weeks Late
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Real-Time Calculation Results Display Column -->
+        <div class="col-lg-6">
+            <div class="card-modern p-4 p-md-5 h-100 d-flex flex-direction-column">
+                <h4 class="fw-bold mb-4 d-flex align-items-center gap-2">
+                    <span class="bg-success text-white p-2 rounded-3 fs-5 d-inline-flex align-items-center justify-content-center" style="width: 36px; height: 36px;">
+                        <i class="bi bi-receipt"></i>
+                    </span>
+                    Calculation Summary
+                </h4>
+
+                <!-- Calculated Due Date Banner -->
+                <div class="p-3 bg-light rounded-3 border mb-4">
+                    <div class="small text-muted text-uppercase fw-semibold mb-1">Calculated Official Due Date</div>
+                    <div id="outDueDate" class="fs-4 fw-bold text-primary">
+                        {{ default_due|date:"D, M d, Y" }}
+                    </div>
+                    <div class="small text-muted mt-1">Based on issue date + selected loan duration</div>
+                </div>
+
+                <!-- Fine Result Display Box -->
+                <div class="calc-result-box mb-4 text-center">
+                    <div class="small text-uppercase tracking-wider text-light opacity-75 mb-1">
+                        Estimated Overdue Fine
+                    </div>
+                    <div id="outFineAmount" class="calc-fine-number">
+                        $0.00
+                    </div>
+                    <div id="outStatusBadge" class="badge bg-success fs-6 px-3 py-2 mt-2">
+                        <i class="bi bi-check-circle-fill me-1"></i> On-Time / Early
+                    </div>
+                </div>
+
+                <!-- Detailed Breakdown List -->
+                <div class="list-group list-group-flush mb-4 small">
+                    <div class="list-group-item d-flex justify-content-between px-0 bg-transparent">
+                        <span class="text-muted">Deadline Status Difference:</span>
+                        <strong id="outDaysDifference" class="text-dark">0 days</strong>
+                    </div>
+                    <div class="list-group-item d-flex justify-content-between px-0 bg-transparent">
+                        <span class="text-muted">Calculation Formula:</span>
+                        <span class="text-muted">Days Overdue &times; Daily Fine Rate</span>
+                    </div>
+                    <div class="list-group-item d-flex justify-content-between px-0 bg-transparent">
+                        <span class="text-muted">Policy Summary:</span>
+                        <span id="outSummaryText" class="text-end text-dark fw-semibold" style="max-width: 260px;">
+                            No overdue fine applied.
+                        </span>
+                    </div>
+                </div>
+
+                <div class="mt-auto d-flex gap-2">
+                    <a href="{% url 'issue_book' %}" class="btn btn-primary-custom flex-grow-1">
+                        <i class="bi bi-box-arrow-up-right me-1"></i> Issue Book with These Rules
+                    </a>
+                    <a href="{% url 'catalog' %}" class="btn btn-outline-secondary">
+                        Catalog
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Circulation Policy Explainer Section -->
+    <div class="row mt-5">
+        <div class="col-12">
+            <div class="card-modern p-4">
+                <h5 class="fw-bold mb-3">
+                    <i class="bi bi-journal-check text-primary me-2"></i> Library Lending & Fine Calculation Policy
+                </h5>
+                <div class="row g-3 small">
+                    <div class="col-md-4">
+                        <div class="p-3 bg-light rounded-3 h-100">
+                            <h6 class="fw-bold mb-1">Standard Loan Period</h6>
+                            <p class="text-muted mb-0">All books are loaned for an initial duration of <strong>14 days</strong> from the date of checkout.</p>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="p-3 bg-light rounded-3 h-100">
+                            <h6 class="fw-bold mb-1">Overdue Rate</h6>
+                            <p class="text-muted mb-0">Returns made after the due date incur an automated charge of <strong>$1.00 per calendar day</strong> overdue.</p>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="p-3 bg-light rounded-3 h-100">
+                            <h6 class="fw-bold mb-1">Inventory Restoration</h6>
+                            <p class="text-muted mb-0">Upon recording a return, available copies increment automatically, allowing other patrons to borrow.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function applyPreset(daysOverdue) {
+    const issueDateInput = document.getElementById('calcIssueDate');
+    const loanDaysInput = document.getElementById('calcLoanDays');
+    const returnDateInput = document.getElementById('calcReturnDate');
+    
+    if (!issueDateInput || !loanDaysInput || !returnDateInput) return;
+    
+    const issue = new Date(issueDateInput.value + 'T00:00:00');
+    const loanDays = parseInt(loanDaysInput.value, 10);
+    
+    const targetReturn = new Date(issue);
+    targetReturn.setDate(targetReturn.getDate() + loanDays + daysOverdue);
+    
+    const yyyy = targetReturn.getFullYear();
+    const mm = String(targetReturn.getMonth() + 1).padStart(2, '0');
+    const dd = String(targetReturn.getDate()).padStart(2, '0');
+    
+    returnDateInput.value = `${yyyy}-${mm}-${dd}`;
+    
+    // Trigger recalculation event
+    returnDateInput.dispatchEvent(new Event('change'));
+}
+</script>
+{% endblock %}

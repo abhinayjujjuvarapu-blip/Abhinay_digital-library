@@ -1,0 +1,130 @@
+{% extends 'library/base.html' %}
+{% load static %}
+
+{% block title %}Issue Book — LibriVerse{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <!-- Header -->
+            <div class="d-flex align-items-center justify-content-between mb-4">
+                <div>
+                    <h2 class="fw-bold mb-1">Issue a Book</h2>
+                    <p class="text-muted mb-0">Record a new book loan for a registered library member.</p>
+                </div>
+                <a href="{% url 'catalog' %}" class="btn btn-outline-secondary btn-sm">
+                    <i class="bi bi-arrow-left me-1"></i> Back to Catalog
+                </a>
+            </div>
+
+            <!-- Preselected Book Banner if applicable -->
+            {% if preselected_book %}
+            <div class="card-modern p-3 mb-4 bg-light">
+                <div class="d-flex align-items-center gap-3">
+                    <img src="{{ preselected_book.cover_url }}" alt="{{ preselected_book.title }}" 
+                         style="width: 60px; height: 80px; object-fit: cover; border-radius: 6px;"
+                         onerror="this.onerror=null; this.src='https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?auto=format&fit=crop&w=600&q=80';">
+                    <div class="flex-grow-1">
+                        <span class="badge bg-primary-subtle text-primary mb-1">{{ preselected_book.genre }}</span>
+                        <h5 class="fw-bold mb-0">{{ preselected_book.title }}</h5>
+                        <div class="small text-muted">Author: {{ preselected_book.author.name }} | ISBN: {{ preselected_book.isbn }}</div>
+                    </div>
+                    <div>
+                        <span class="badge badge-available">
+                            {{ preselected_book.available_copies }} Copies Left
+                        </span>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Circulation Form Card -->
+            <div class="card-modern p-4 p-md-5">
+                <form method="POST" novalidate>
+                    {% csrf_token %}
+
+                    {% if form.non_field_errors %}
+                    <div class="alert alert-danger mb-4">
+                        {% for error in form.non_field_errors %}
+                            <div><i class="bi bi-exclamation-circle me-1"></i> {{ error }}</div>
+                        {% endfor %}
+                    </div>
+                    {% endif %}
+
+                    <!-- Member Selection -->
+                    <div class="mb-4">
+                        <div class="d-flex justify-content-between align-items-center mb-1">
+                            <label for="id_member" class="form-label fw-bold mb-0">Select Member *</label>
+                            <a href="{% url 'member_create' %}" class="small text-primary text-decoration-none">
+                                <i class="bi bi-person-plus me-1"></i> Register New Member
+                            </a>
+                        </div>
+                        {{ form.member }}
+                        {% if form.member.errors %}
+                        <div class="text-danger small mt-1">{{ form.member.errors|join:", " }}</div>
+                        {% endif %}
+                        <div class="form-text">Choose the borrower who is checking out the book.</div>
+                    </div>
+
+                    <!-- Book Selection -->
+                    <div class="mb-4">
+                        <label for="id_book" class="form-label fw-bold">Select Book Title *</label>
+                        {{ form.book }}
+                        {% if form.book.errors %}
+                        <div class="text-danger small mt-1">{{ form.book.errors|join:", " }}</div>
+                        {% endif %}
+                        <div class="form-text">
+                            <i class="bi bi-info-circle me-1"></i> Only books with at least 1 available copy are listed.
+                        </div>
+                    </div>
+
+                    <!-- Date Row: Issue Date & Due Date -->
+                    <div class="row g-3 mb-4">
+                        <div class="col-md-6">
+                            <label for="id_issue_date" class="form-label fw-bold">Issue Date *</label>
+                            {{ form.issue_date }}
+                            {% if form.issue_date.errors %}
+                            <div class="text-danger small mt-1">{{ form.issue_date.errors|join:", " }}</div>
+                            {% endif %}
+                            <div class="form-text">Defaults to today's checkout date.</div>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="id_due_date" class="form-label fw-bold">
+                                Due Date * 
+                                <span class="badge bg-secondary-subtle text-secondary-emphasis ms-1">14-Day Standard</span>
+                            </label>
+                            {{ form.due_date }}
+                            {% if form.due_date.errors %}
+                            <div class="text-danger small mt-1">{{ form.due_date.errors|join:", " }}</div>
+                            {% endif %}
+                            <div class="form-text">Automatically calculated to 14 days after issue.</div>
+                        </div>
+                    </div>
+
+                    <!-- Loan Rules & Business Logic Notice -->
+                    <div class="alert alert-info d-flex align-items-start gap-3 p-3 mb-4 rounded-3 border-0 bg-primary-light">
+                        <i class="bi bi-shield-check fs-4 text-primary"></i>
+                        <div class="small text-dark">
+                            <strong class="d-block mb-1">Circulation & Inventory Rules</strong>
+                            <ul class="mb-0 ps-3">
+                                <li>Available stock for this book will be reduced by <strong>1 copy</strong> upon issue.</li>
+                                <li>Standard borrowing period is <strong>14 calendar days</strong>.</li>
+                                <li>Overdue returns are assessed at <strong>$1.00 per day</strong> past the due date.</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <!-- Submit Actions -->
+                    <div class="d-flex gap-2 justify-content-end">
+                        <a href="{% url 'catalog' %}" class="btn btn-outline-secondary">Cancel</a>
+                        <button type="submit" class="btn btn-primary-custom px-4">
+                            <i class="bi bi-check2-circle me-1"></i> Confirm & Issue Book
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
