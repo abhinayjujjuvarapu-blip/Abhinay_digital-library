@@ -47,6 +47,8 @@ project-root/
 ├── manage.py                  # Django administrative script
 ├── requirements.txt           # Production & local dependencies
 ├── render.yaml                # Render Blueprint deployment specification
+├── build.sh                   # Render automated build script (collectstatic, migrate, seed)
+├── .python-version            # Specifies Python 3.11.0 runtime for Render
 ├── create_superuser.py        # Superuser creation & demo data seeding
 ├── README.md                  # Comprehensive project documentation
 ├── .gitignore                 # Git ignore rules (venv, bytecode, build artifacts)
